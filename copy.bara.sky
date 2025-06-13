@@ -1,0 +1,72 @@
+# copy.bara.sky
+
+# This configuration file sets up a Copybara workflow to sync NKI-AI/aiforoncology-internal/aifo/direct
+# to the NKI-AI/direct repository.
+
+# Update the following fields according to your needs:
+#   - In 'origin', change the URL and ref to match your source repository and branch.
+#   - In 'destination', ensure the URL and push branch point to the target repository.
+#   - The 'origin_files' glob restricts the sync to the specific part of the project 
+#     you want to mirror. Adjust it (e.g., "sync_folder/**") as necessary.
+
+REFERENCE_REPO_URL = "git@github.com:NKI-AI/aiforoncology-internal.git" # The source repository URL to sync from.
+REFERENCE_BRANCH = "project/adaptive_mri_bounds"  # The branch in the source repository to sync from.
+
+TARGET_REPO_URL = "git@github.com:luukbalkenende/Adaptive-MRI-bounds.git" # The destination repository URL to sync to.
+TARGET_BRANCH = "main"  # The branch in the destination repository to sync to.
+
+EXCLUDE_FILES = [
+    "projects/radiology/adaptive_mri_bounds/README.md", 
+    "projects/radiology/adaptive_mri_bounds/BUILD.bazel",
+]
+# Projects to copy wholesale.
+PROJECT_DIRECTORY_GLOBS = [
+    "projects/radiology/adaptive_mri_bounds/**",
+]
+
+# Combine all glob patterns into a single tuple for the workflow.
+GLOBS = (
+    PROJECT_DIRECTORY_GLOBS
+)
+
+core.workflow(
+    name = "default",
+    origin = git.origin(
+        url = REFERENCE_REPO_URL,
+        ref = REFERENCE_BRANCH,  # Change this to the branch you want to sync from.
+    ),
+    destination = git.destination(
+        url = TARGET_REPO_URL,
+        fetch = TARGET_BRANCH, # Change this to the branch you want to sync to.
+        push = TARGET_BRANCH,
+    ),
+    origin_files = glob(GLOBS, exclude = EXCLUDE_FILES,),
+    destination_files = glob(["**"], exclude = []),
+    transformations = [
+        core.move(
+            before = "projects/radiology/adaptive_mri_bounds/README_external.md", 
+            after = "README.md"
+        ),
+        core.move(
+            before = "projects/radiology/adaptive_mri_bounds/BUILD_external.bazel", 
+            after = "BUILD.bazel"
+        ),
+        # Move everything else to the root of the destination repository.
+        core.move(
+            before = "projects/radiology/adaptive_mri_bounds", 
+            after = ""
+        ),
+    ],
+    # Can change the authoring information to reflect the person or team responsible for this workflow.
+    authoring = authoring.pass_thru("Luuk Balkenende <luukbalkenende@gmail.com>"),
+
+)
+
+# To execute the workflow, run:
+#   bazel run //projects/radiology/adaptive_mri_bounds/tools:copybara -- migrate <absolute_path_to_copy.bara.sky>
+# If it's your first time running Copybara in specific target, you may need to initialize it first:
+
+#   bazel run //projects/radiology/adaptive_mri_bounds/tools:copybara -- migrate <absolute_path_to_copy.bara.sky> --init-history
+# You can also use the `--force` flag to overwrite existing files in the destination repository.
+
+# Ensure you have the necessary permissions and that the branches exist in both repositories.
